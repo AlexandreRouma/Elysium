@@ -51,8 +51,9 @@ namespace rt {
         float ambiantFactor;
         float diffuseFactor;
         float specularFactor;
+        float translucentFactor;
         float shinyness;
-        float translucency;
+        float refractIndex;
         Texture texture;
     };
 

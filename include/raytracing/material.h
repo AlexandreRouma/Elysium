@@ -13,9 +13,10 @@ namespace rtmat {
         mat.diffuseFactor = 0.0f;
         mat.specularFactor = 0.0f;
         mat.shinyness = 0.0f;
-        mat.translucency = 0.0f;
+        mat.translucentFactor = 0.0f;
         mat.hasTexture = false;
         mat.isEmissive = false;
+        mat.refractIndex = 1.0f;
         mat.emissionBrightness = 0.0f;
         return mat;
     }

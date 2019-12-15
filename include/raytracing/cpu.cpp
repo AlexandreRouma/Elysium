@@ -80,7 +80,7 @@ namespace rt {
         }
     }
 
-    glm::vec3 castRay(Ray ray, Scene& scene, int maxBounce, int& bounceCount, float& distance) {
+    glm::vec3 castRay(Ray ray, Scene& scene, int maxBounce, int& bounceCount, float& distance, bool direct, float currentRefIndex) {
         int id = 0;
         float dist = 0.0f;
         SurfaceCoord surfaceCoord;
@@ -99,47 +99,54 @@ namespace rt {
 
         // TODO: Add texture support
 
-        float select = 0.9f;//cRand();
+        float select = cRand();
         Material mat = scene.objects[id].material;
         if (mat.isEmissive) {
+            // if (abs(glm::dot(normal, ray.direction)) < 0.99 && !direct) {
+            //     return glm::vec3(0.0f, 0.0f, 0.0f);
+            // }
             distance += dist;
             bounceCount++;
             return mat.emissiveColor * mat.emissionBrightness;
         }
 
-        distance += dist;
-        bounceCount++;
-        ray.origin = (ray.direction * dist) + ray.origin + (normal * 0.00001f); // TODO: change epsilon value
-        ray.direction = CosineBRDF(normal);
-        return castRay(ray, scene, maxBounce, bounceCount, distance) * mat.diffuseColor;
+        if (select <= mat.ambiantFactor && mat.ambiantFactor != 0.0f) { // Ambiant
+            distance += dist;
+            bounceCount++;
+            return scene.objects[id].material.ambiantColor;
+        }
+        else if (select <= mat.ambiantFactor + mat.diffuseFactor && mat.diffuseFactor != 0.0f) { // Diffuse
+            distance += dist;
+            bounceCount++;
+            ray.origin = (ray.direction * dist) + ray.origin + (normal * std::numeric_limits<float>::min()); // TODO: change epsilon value
+            ray.direction = CosineBRDF(normal);
+            return castRay(ray, scene, maxBounce, bounceCount, distance, false, currentRefIndex) * mat.diffuseColor;
+        }
+        else if (select <= mat.ambiantFactor + mat.diffuseFactor + mat.specularFactor && mat.specularFactor != 0.0f) { // Specular
+            distance += dist;
+            bounceCount++;
+            ray.direction = glm::normalize(glm::reflect(ray.direction, normal));
+            ray.origin = (originalDir * dist) + ray.origin + (ray.direction * std::numeric_limits<float>::min()); // TODO: change epsilon value
+            return castRay(ray, scene, maxBounce, bounceCount, distance, false, currentRefIndex) * mat.specularColor;
+        }
+        else { // Translucent
+            distance += dist;
+            bounceCount++;
+            if (currentRefIndex != 1.0f) { // Currently in object
+                ray.direction = glm::normalize(glm::refract(ray.direction, normal, currentRefIndex));
+                currentRefIndex = 1.0f;
+            }
+            else { // Currently in air
+                ray.direction = glm::normalize(glm::refract(ray.direction, normal, 1.0f / mat.refractIndex));
+                currentRefIndex = 1.0f / mat.refractIndex;
+            }
 
-        // if (select < mat.ambiantFactor) { // Ambiant
-        //     printf("Ambiant!\n");
-        //     distance += dist;
-        //     bounceCount++;
-        //     return scene.objects[id].material.ambiantColor;
-        // }
-        // else if (select < mat.ambiantFactor + mat.diffuseFactor) { // Diffuse
-        //     distance += dist;
-        //     bounceCount++;
-        //     ray.origin = (ray.direction * dist) + ray.origin + (normal * 0.001f); // TODO: change epsilon value
-        //     ray.direction = CosineBRDF(normal);
-        //     return castRay(ray, scene, maxBounce, bounceCount, distance) * mat.diffuseColor;
-        // }
-        // else if (select < mat.ambiantFactor + mat.diffuseFactor + mat.specularFactor) { // Specular
-        //     printf("Specular!\n");
-        //     distance += dist;
-        //     bounceCount++;
-        //     ray.direction = glm::normalize(glm::reflect(ray.direction, normal));
-        //     ray.origin = (originalDir * dist) + ray.origin + (ray.direction * 0.00001f); // TODO: change epsilon value
-        //     return castRay(ray, scene, maxBounce, bounceCount, distance) * mat.specularColor;
-        // }
-        // else { // Translucent
-        //     printf("Translucent! %f\n", select);
-        //     distance += dist;
-        //     bounceCount++;
-        //     return glm::vec3(0.0f, 0.0f, 0.0f);
-        // }
+            ray.origin = (originalDir * dist) + ray.origin + (ray.direction * std::numeric_limits<float>::min());
+
+            return castRay(ray, scene, maxBounce, bounceCount, distance, false, currentRefIndex) * mat.translucentColor;
+            
+            return glm::vec3(0.0f, 0.0f, 0.0f);
+        }
     }
 
     void cpuRender(Scene scene, Buffer buffer, int maxBounce) {
@@ -169,7 +176,7 @@ namespace rt {
                 ray.direction = glm::normalize(glm::vec3(xpos, ypos, scene.camera.distance)); // TODO: multiply by cam's rot matrix
                 int bounceCount = 0;
                 float distance = 0.0f;
-                buffer.pixels[(y * buffer.width) + x] += castRay(ray, scene, maxBounce, bounceCount, distance);
+                buffer.pixels[(y * buffer.width) + x] += castRay(ray, scene, maxBounce, bounceCount, distance, true, 1.0f);
             }
         }
     }

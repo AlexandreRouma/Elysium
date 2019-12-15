@@ -111,6 +111,13 @@ int main(int, char**) {
     rt::Material blueWall = rtmat::lambertian(glm::vec3(0.3f, 0.3f, 1.0f));
     rt::Material lightSource = rtmat::lightSource(glm::vec3(1.0f, 1.0f, 1.0f), 30.0f);
 
+    blueWall.diffuseFactor = 0.0f;
+    blueWall.translucentFactor = 0.95f;
+    blueWall.specularFactor = 0.05f,
+    blueWall.refractIndex = 1.65f;
+    blueWall.translucentColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    blueWall.specularColor = glm::vec3(1.0f, 1.0f, 1.0f);
+
     rt::Object bottom_1 = rt::createTriangle(glm::vec3(-5, -5, 8), glm::vec3(5, -5, 8), glm::vec3(5, -5, 18), whiteWall);
     rt::Object bottom_2 = rt::createTriangle(glm::vec3(-5, -5, 8), glm::vec3(-5, -5, 18), glm::vec3(5, -5, 18), whiteWall);
     rt::Object top_1 = rt::createTriangle(glm::vec3(-5, 5, 8), glm::vec3(5, 5, 8), glm::vec3(5, 5, 18), whiteWall);
@@ -124,7 +131,7 @@ int main(int, char**) {
     rt::Object light_1 = rt::createTriangle(glm::vec3(-1, 4.98f, 12), glm::vec3(1, 4.98f, 12), glm::vec3(1, 4.98f, 14), lightSource);
     rt::Object light_2 = rt::createTriangle(glm::vec3(-1, 4.98f, 12), glm::vec3(-1, 4.98f, 14), glm::vec3(1, 4.98f, 14), lightSource);
 
-    std::vector<rt::Object> cube = rtgeo::cube(glm::vec3(0.0f, -4.0f, 16), glm::vec3(), 2.0f, 2.0f, 2.0f, blueWall);
+    std::vector<rt::Object> cube = rtgeo::cube(glm::vec3(-3.0f, -3.5f, 14), glm::vec3(), 2.5f, 2.5f, 2.5f, blueWall);
 
     std::vector<rt::Object> objModel = rtmodel::loadObj("teapot.obj", glm::vec3(0.0f, -5, 14), blueWall);
 
@@ -146,8 +153,6 @@ int main(int, char**) {
     //rt::appendObjList(objects, objModel);
 
     rt::Scene scene = rt::compileScene(camera, objects);
-
-    
 
     // Collect data for smoothing
     int metaSamples = 64;
